@@ -22,8 +22,10 @@
 
 package org.jboss.as.test.integration.ejb.transaction.exception;
 
-import javax.ejb.EJBObject;
+import java.rmi.RemoteException;
 
-public interface StatelessBeanRemote extends IStatelessBean, EJBObject {
+import javax.ejb.EJBHome;
 
+public interface StatelessBeanHome extends EJBHome {
+    StatelessBeanRemote create() throws RemoteException;
 }

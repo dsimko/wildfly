@@ -22,8 +22,9 @@
 
 package org.jboss.as.test.integration.ejb.transaction.exception;
 
-import javax.ejb.EJBObject;
+import javax.ejb.Local;
 
-public interface StatelessBeanRemote extends IStatelessBean, EJBObject {
+@Local
+public interface StatelessBeanLocal extends IStatelessBean {
 
 }

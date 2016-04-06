@@ -25,7 +25,6 @@ package org.jboss.as.test.integration.ejb.transaction.exception;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 
-import javax.naming.NamingException;
 import javax.transaction.UserTransaction;
 
 import org.jboss.arquillian.container.test.api.RunAsClient;
@@ -49,17 +48,12 @@ import org.junit.runner.RunWith;
  */
 @RunAsClient
 @RunWith(Arquillian.class)
-public class TxExceptionEjbClientTestCase extends TxExceptionTestCase {
+public class TxExceptionEjbClientTestCase extends TxExceptionBaseTestCase {
 
     private static Logger LOG = Logger.getLogger(TxExceptionEjbClientTestCase.class);
 
     private static String nodeName;
 
-    /**
-     * Create and setup the remoting connection
-     *
-     * @throws Exception
-     */
     @BeforeClass
     public static void beforeClass() throws Exception {
         nodeName = EJBManagementUtil.getNodeName();
@@ -67,8 +61,6 @@ public class TxExceptionEjbClientTestCase extends TxExceptionTestCase {
 
     /**
      * Create and setup the EJB client context backed by the remoting receiver
-     *
-     * @throws Exception
      */
     @Before
     public void beforeTest() throws Exception {
@@ -76,10 +68,27 @@ public class TxExceptionEjbClientTestCase extends TxExceptionTestCase {
         EJBClientTransactionContext.setGlobalContext(localUserTxContext);
     }
 
-    @Test
     @Override
+    protected void checkReceivedException(Exception e, ThrownExceptionType thrownExceptionType) {
+        switch (thrownExceptionType) {
+        case FROM_BEAN_METHOD_WHICH_RUNS_IN_TRANSACTION_STARTED_BY_CALLER:
+            assertThat("TransactionRolledbackException should be thrown.", e.getClass(), equalTo(javax.transaction.TransactionRolledbackException.class));
+            break;
+        case FROM_BEAN_METHOD_WHICH_STARTED_CONTAINER_MANAGED_TRANSACTION:
+            // FIXME
+            assertThat("TransactionRolledbackException should be thrown.", e.getClass(), equalTo(javax.transaction.TransactionRolledbackException.class));
+            break;
+        case FROM_BEAN_METHOD_WHICH_STARTED_BEAN_MANAGED_TRANSACTION:
+            assertThat("RemoteException should be thrown.", e.getClass(), equalTo(java.rmi.RemoteException.class));
+            break;
+        default:
+            Assert.fail();
+        }
+    }
+
+    @Test
     public void testBMTxHeuristicExceptionIsPropagatedToClient() throws Exception {
-        StatelessBeanRemote bean = getBean();
+        StatelessBeanRemote bean = getCMTBean();
         Assert.assertNotNull(bean);
         try {
             final UserTransaction userTransaction = getUserTransaction();
@@ -96,9 +105,8 @@ public class TxExceptionEjbClientTestCase extends TxExceptionTestCase {
 
     @Ignore("JBEAP-165")
     @Test
-    @Override
     public void testDriverSpecificExceptionIsNotPropagatedToClient() throws Exception {
-        super.testDriverSpecificExceptionIsNotPropagatedToClient();
+//        super.testDriverSpecificExceptionIsNotPropagatedToClient();
     }
 
     @Override
@@ -107,10 +115,16 @@ public class TxExceptionEjbClientTestCase extends TxExceptionTestCase {
     }
 
     @Override
-    protected StatelessBeanRemote getBean() throws NamingException {
+    protected StatelessBeanRemote getCMTBean() {
         final StatelessEJBLocator<StatelessBeanRemote> remoteBeanLocator = new StatelessEJBLocator<StatelessBeanRemote>(StatelessBeanRemote.class,
-                APP_NAME, MODULE_NAME, StatelessBean.class.getSimpleName(), "");
+                APP_NAME, MODULE_NAME, StatelessCMTBean.class.getSimpleName(), "");
         return EJBClient.createProxy(remoteBeanLocator);
     }
 
+    @Override
+    protected IStatelessBean getBMTBean() {
+        final StatelessEJBLocator<StatelessBeanRemote> remoteBeanLocator = new StatelessEJBLocator<StatelessBeanRemote>(StatelessBeanRemote.class,
+                APP_NAME, MODULE_NAME, StatelessBMTBean.class.getSimpleName(), "");
+        return EJBClient.createProxy(remoteBeanLocator);
+    }
 }

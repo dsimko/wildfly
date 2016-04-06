@@ -22,37 +22,15 @@
 
 package org.jboss.as.test.integration.ejb.transaction.exception;
 
-import javax.annotation.Resource;
-import javax.ejb.LocalBean;
-import javax.ejb.Remote;
-import javax.ejb.Stateless;
-import javax.ejb.TransactionAttribute;
-import javax.ejb.TransactionAttributeType;
-import javax.transaction.Transaction;
-import javax.transaction.TransactionManager;
+import java.rmi.RemoteException;
 
 import org.jboss.as.test.integration.ejb.transaction.exception.TestXAResource.CommitOperation;
 
-@Remote
-@LocalBean
-@Stateless
-public class StatelessBean implements StatelessBeanRemote {
+public interface IStatelessBean {
 
-    @Resource(name = "java:jboss/TransactionManager")
-    private TransactionManager tm;
+    void throwRuntimeException() throws RemoteException;
 
-    @Override
-    @TransactionAttribute(TransactionAttributeType.REQUIRED)
-    public void testTwoResourceTransaction(CommitOperation secondResourceCommitOp) throws Exception {
-        Transaction txn = tm.getTransaction();
-        txn.enlistResource(new TestXAResource(CommitOperation.NONE));
-        txn.enlistResource(new TestXAResource(secondResourceCommitOp));
-    }
+    void testTwoResourceTransaction(CommitOperation secondResourceCommitOp) throws Exception;
 
-    @Override
-    @TransactionAttribute(TransactionAttributeType.MANDATORY)
-    public void testTwoResourceTransactionMandatory(CommitOperation secondResourceCommitOp) throws Exception {
-        testTwoResourceTransaction(secondResourceCommitOp);
-    }
-
+    void testTwoResourceTransactionMandatory(CommitOperation secondResourceCommitOp) throws Exception;
 }

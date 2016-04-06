@@ -116,9 +116,6 @@ public class TestXAResource implements XAResource {
 
     /**
      * Creates instance of dynamically created XAException class.
-     * 
-     * @param xaErrorCode
-     *            XA Error Code
      */
     private static XAException createDriverSpecificXAException(int xaErrorCode) {
         try {
@@ -131,11 +128,6 @@ public class TestXAResource implements XAResource {
 
     /**
      * Creates new instance of given class.
-     * 
-     * @param xaErrorCode
-     * @param clazz
-     * @return a new object created by calling the constructor on the given
-     *         class
      */
     private static XAException createInstanceOfPGXAException(int xaErrorCode, Class<?> clazz) throws Exception {
         Constructor<?> constructor = clazz.getDeclaredConstructor(int.class);
@@ -144,10 +136,7 @@ public class TestXAResource implements XAResource {
     }
 
     /**
-     * Creates new public class (org.postgresql.xa.PGXAException).
-     * 
-     * @return dynamically created Class.
-     * @throws Exception
+     * Creates new public class named org.postgresql.xa.PGXAException.
      */
     private static Class<?> createPGXAExceptionClass() throws Exception {
         ClassPool pool = ClassPool.getDefault();

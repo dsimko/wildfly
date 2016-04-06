@@ -27,20 +27,12 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 
-import javax.inject.Inject;
-import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.transaction.UserTransaction;
 
-import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.as.test.integration.ejb.transaction.exception.TestXAResource.CommitOperation;
 import org.jboss.logging.Logger;
-import org.jboss.shrinkwrap.api.Archive;
-import org.jboss.shrinkwrap.api.ShrinkWrap;
-import org.jboss.shrinkwrap.api.spec.EnterpriseArchive;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -50,50 +42,41 @@ import org.junit.runner.RunWith;
  * exception.
  */
 @RunWith(Arquillian.class)
-public class TxExceptionTestCase {
-
-    protected static final String APP_NAME = "tx-exception-test";
-    protected static final String MODULE_NAME = "ejb";
+public class TxExceptionTestCase extends TxExceptionBaseTestCase {
 
     private static Logger LOG = Logger.getLogger(TxExceptionTestCase.class);
 
-    @ArquillianResource
-    private InitialContext iniCtx;
-    @Inject
-    private UserTransaction userTransaction;
-
-    /**
-     * Creates an EJB deployment
-     *
-     * @return
-     */
-    @Deployment
-    public static Archive<?> createDeployment() {
-        final EnterpriseArchive ear = ShrinkWrap.create(EnterpriseArchive.class, APP_NAME + ".ear");
-        final JavaArchive jar = ShrinkWrap.create(JavaArchive.class, MODULE_NAME + ".jar");
-        jar.addPackage(TxExceptionTestCase.class.getPackage());
-        jar.addPackages(true, "javassist");
-        ear.addAsModule(jar);
-        return ear;
+    @Override
+    protected void checkReceivedException(Exception e, ThrownExceptionType thrownExceptionType) {
+        switch (thrownExceptionType) {
+        case FROM_BEAN_METHOD_WHICH_RUNS_IN_TRANSACTION_STARTED_BY_CALLER:
+            assertThat("EJBTransactionRolledbackException should be thrown.", e.getClass(), equalTo(javax.ejb.EJBTransactionRolledbackException.class));
+            break;
+        case FROM_BEAN_METHOD_WHICH_STARTED_CONTAINER_MANAGED_TRANSACTION:
+        case FROM_BEAN_METHOD_WHICH_STARTED_BEAN_MANAGED_TRANSACTION:
+            assertThat("EJBException should be thrown.", e.getClass(), equalTo(javax.ejb.EJBException.class));
+            break;
+        default:
+            Assert.fail();
+        }
     }
 
     @Test
     public void testCMTxHeuristicExceptionIsPropagatedToClient() throws Exception {
-        StatelessBeanRemote bean = getBean();
+        IStatelessBean bean = getCMTBean();
         try {
             bean.testTwoResourceTransaction(CommitOperation.THROW_KNOWN_XA_EXCEPTION);
             Assert.fail("It was expected a EJBException being thrown.");
         } catch (Exception e) {
             LOG.infof(e, "Client got exception: %s", e.getMessage());
             assertThat("EJBException should be thrown.", e.getClass(), equalTo(javax.ejb.EJBException.class));
-            assertThat("HeuristicMixedException should be propagated.", e.getCause().getClass(),
-                    equalTo(javax.transaction.HeuristicMixedException.class));
+            assertThat("HeuristicMixedException should be propagated.", e.getCause().getClass(), equalTo(javax.transaction.HeuristicMixedException.class));
         }
     }
 
     @Test
     public void testBMTxHeuristicExceptionIsPropagatedToClient() throws Exception {
-        StatelessBeanRemote bean = getBean();
+        IStatelessBean bean = getCMTBean();
         Assert.assertNotNull(bean);
         try {
             final UserTransaction userTransaction = getUserTransaction();
@@ -109,7 +92,7 @@ public class TxExceptionTestCase {
 
     @Test
     public void testDriverSpecificExceptionIsNotPropagatedToClient() throws Exception {
-        StatelessBeanRemote bean = getBean();
+        IStatelessBean bean = getCMTBean();
         try {
             bean.testTwoResourceTransaction(CommitOperation.THROW_UNKNOWN_XA_EXCEPTION);
             Assert.fail("It was expected a HeuristicMixedException being thrown.");
@@ -120,13 +103,23 @@ public class TxExceptionTestCase {
         }
     }
 
-    protected UserTransaction getUserTransaction() {
-        return userTransaction;
+    @Override
+    protected StatelessBeanLocal getCMTBean() {
+        try {
+            return StatelessBeanLocal.class.cast(
+                    iniCtx.lookup("java:global/" + APP_NAME + "/" + MODULE_NAME + "/" + StatelessCMTBean.class.getSimpleName() + "!" + StatelessBeanLocal.class.getName()));
+        } catch (NamingException e) {
+            throw new RuntimeException(e);
+        }
     }
-
-    protected StatelessBeanRemote getBean() throws NamingException {
-        return StatelessBean.class.cast(iniCtx.lookup(
-                "java:global/" + APP_NAME + "/" + MODULE_NAME + "/" + StatelessBean.class.getSimpleName() + "!" + StatelessBean.class.getName()));
+    
+    @Override
+    protected IStatelessBean getBMTBean() {
+        try {
+            return StatelessBeanLocal.class.cast(
+                    iniCtx.lookup("java:global/" + APP_NAME + "/" + MODULE_NAME + "/" + StatelessBMTBean.class.getSimpleName() + "!" + StatelessBeanLocal.class.getName()));
+        } catch (NamingException e) {
+            throw new RuntimeException(e);
+        }
     }
-
 }
