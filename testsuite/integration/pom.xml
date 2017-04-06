@@ -44,6 +44,7 @@
         <enforcer.skip>true</enforcer.skip>
 
         <ts.elytron.cli>../../shared/enable-elytron.cli</ts.elytron.cli>
+        <jbossas>jbossas</jbossas>
     </properties>
 
     <profiles>
@@ -244,7 +245,7 @@
                                         <argument>--file=${ts.elytron.cli}</argument>
                                     </arguments>
                                     <environmentVariables>
-                                        <JBOSS_HOME>${project.build.directory}/jbossas</JBOSS_HOME>
+                                        <JBOSS_HOME>${project.build.directory}/${jbossas}</JBOSS_HOME>
                                     </environmentVariables>
                                 </configuration>
                             </execution>

@@ -21,6 +21,8 @@
         <jbossas.ts.dir>${jbossas.ts.integ.dir}/..</jbossas.ts.dir>
         <jbossas.project.dir>${jbossas.ts.dir}/..</jbossas.project.dir>
         <iiop.endorsed.argline>-Djava.endorsed.dirs=${project.build.directory}/endorsed</iiop.endorsed.argline>
+        <ts.elytron.cli>ssl-enable-elytron.cli</ts.elytron.cli>
+        <jbossas>jbossas-iiop-ssl-server</jbossas>
     </properties>
 
     <profiles>
@@ -211,6 +213,36 @@
                 <iiop.endorsed.argline/>
             </properties>
         </profile>
-
+        <profile>
+            <id>elytron.iiop.profile</id>
+            <activation>
+                <property>
+                    <name>elytron</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>create-keystores</id>
+                                <phase>process-test-resources</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${basedir}/create-keystores.sh</executable>
+                                    <environmentVariables>
+                                        <JBOSS_HOME>${project.build.directory}/${jbossas}</JBOSS_HOME>
+                                    </environmentVariables>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 </project>
